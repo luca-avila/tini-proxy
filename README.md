@@ -1,13 +1,16 @@
-# raw-tcp-server
+# tini-proxy
 
-A TCP server built from raw sockets in Python, with no frameworks, to understand
-what happens underneath tools like uvicorn, FastAPI and nginx.
+A TCP server built from raw sockets in Python, with no frameworks, that grows
+step by step into an HTTP server and finally a toy reverse proxy / load
+balancer. The goal is to understand what happens underneath tools like
+uvicorn, FastAPI and nginx.
 
 ## Why
 
 I use FastAPI behind nginx in Docker every day, but I wanted to understand the
 layer below: how a process listens on a port, how the kernel handles
-connections, and how a server deals with multiple clients.
+connections, how a server deals with multiple clients, and what a reverse
+proxy actually does with the bytes in between.
 
 ## Run it
 
@@ -23,13 +26,41 @@ nc localhost 9000
 
 Type a message and press Enter. The server echoes it back.
 
-## Stages
+## Roadmap
 
-- [x] **1. Blocking echo server**: one client at a time, multiple messages per connection
-- [ ] **2. Thread per client**: handle several clients concurrently
-- [ ] **3. Event loop with `selectors`**: one thread, many clients, using epoll
-- [ ] **4. `asyncio` version**: the same model uvicorn uses
-- [ ] **5. Minimal HTTP**: parse raw HTTP requests and respond to `curl` and a browser
+### 1. TCP echo server
+
+`bind`, `listen`, `accept`, `recv`/`send`. This is where it becomes clear that
+TCP is a byte stream, not a sequence of messages, and framing becomes a problem.
+
+- [x] Blocking echo server, multiple messages per connection
+- [ ] Explore framing: partial reads, several messages in one `recv()`
+- [ ] Implement a framing strategy (delimiter or length prefix)
+
+### 2. HTTP/1.1 server from scratch
+
+- [ ] Parse the request line and headers
+- [ ] Read the body using `Content-Length`
+- [ ] Keep-alive: several requests over one connection
+- [ ] Serve static files
+- [ ] Test with `curl -v` and a browser
+
+### 3. Concurrency
+
+The progression that ends up explaining what uvicorn does underneath FastAPI.
+
+- [ ] One thread per connection
+- [ ] Hand-written event loop with `selectors` (epoll)
+- [ ] `asyncio` version
+
+### 4. Mini reverse proxy / load balancer
+
+A toy nginx.
+
+- [ ] Forward requests to a backend
+- [ ] Round-robin between two backends
+- [ ] Health checks
+- [ ] Timeouts
 
 ## What I learned
 
